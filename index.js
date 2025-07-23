@@ -23,14 +23,19 @@ const roleMap = {
     "Pod 6": "1385286282552279040"
 };
 
+// Helper: Convert to Pacific Time
+function toPacific(dateObj) {
+    return new Date(dateObj.toLocaleString("en-US", { timeZone: "America/Los_Angeles" }));
+}
+
 // Schedule 15-minute reminder
 function scheduleReminder(liveDateTimeISO, roleId, clientName) {
-    const liveDateTime = new Date(liveDateTimeISO);
+    const liveDateTime = toPacific(new Date(liveDateTimeISO));
     const reminderTime = new Date(liveDateTime.getTime() - 15 * 60 * 1000);
     const delay = reminderTime.getTime() - Date.now();
 
     if (delay > 0) {
-        console.log(`Scheduling reminder for ${clientName} at ${reminderTime.toLocaleString()}`);
+        console.log(`Scheduling reminder for ${clientName} at ${reminderTime.toLocaleString("en-US", { timeZone: "America/Los_Angeles" })}`);
         setTimeout(async () => {
             try {
                 const channel = await discordClient.channels.fetch(CHANNEL_ID);
@@ -59,15 +64,18 @@ app.post('/new-live', async (req, res) => {
             return res.status(400).send('Invalid Pod name');
         }
 
-        const channel = await discordClient.channels.fetch(CHANNEL_ID);
+        const liveDateObj = toPacific(new Date(liveDateTime));
 
-        // Format message date/time nicely
-        const liveDate = new Date(liveDateTime).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
-        const liveTime = new Date(liveDateTime).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+        const liveDate = liveDateObj.toLocaleDateString("en-US", { 
+            month: "long", day: "numeric", year: "numeric", timeZone: "America/Los_Angeles"
+        });
+        const liveTime = liveDateObj.toLocaleTimeString("en-US", { 
+            hour: "numeric", minute: "2-digit", timeZone: "America/Los_Angeles"
+        });
 
         const formattedMessage = `<@&${roleId}>\n${clientName} – ${liveDate} at ${liveTime} PST`;
 
-        // Send the initial message
+        const channel = await discordClient.channels.fetch(CHANNEL_ID);
         await channel.send(formattedMessage);
         console.log(`Posted new live for ${clientName} (${pod})`);
 
