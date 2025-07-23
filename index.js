@@ -1,6 +1,5 @@
 const express = require('express');
 const { Client, GatewayIntentBits } = require('discord.js');
-const fetch = require('node-fetch');
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const CHANNEL_ID = process.env.CHANNEL_ID;
