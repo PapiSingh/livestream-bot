@@ -23,34 +23,7 @@ const roleMap = {
     "Pod 6": "1385286282552279040"
 };
 
-// Schedule 15-minute reminder
-function scheduleReminder(liveDateObj, roleId, clientName) {
-    const reminderTime = new Date(liveDateObj.getTime() - 15 * 60 * 1000);
-    const delay = reminderTime.getTime() - Date.now();
-
-    console.log(`DEBUG: Now = ${new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" })}`);
-    console.log(`DEBUG: Live time = ${liveDateObj.toLocaleString("en-US", { timeZone: "America/Los_Angeles" })}`);
-    console.log(`DEBUG: Reminder scheduled for = ${reminderTime.toLocaleString("en-US", { timeZone: "America/Los_Angeles" })}`);
-    console.log(`DEBUG: Delay (ms) = ${delay}`);
-
-    if (delay > 0) {
-        console.log(`Scheduling reminder for ${clientName} at ${reminderTime.toLocaleString("en-US", { timeZone: "America/Los_Angeles" })}`);
-        setTimeout(async () => {
-            try {
-                const channel = await discordClient.channels.fetch(CHANNEL_ID);
-                await channel.send(`<@&${roleId}>\nReminder: ${clientName} goes live in 15 minutes!`);
-                console.log(`Sent reminder for ${clientName}`);
-            } catch (err) {
-                console.error('Error sending reminder:', err);
-            }
-        }, delay);
-    } else {
-        console.log(`Skipped reminder for ${clientName} (time already passed or too close)`);
-    }
-}
-
-
-// Webhook endpoint for Google Apps Script
+// New live endpoint (main ping)
 app.post('/new-live', async (req, res) => {
     try {
         const { clientName, pod, liveDateTime } = req.body;
@@ -65,7 +38,6 @@ app.post('/new-live', async (req, res) => {
         }
 
         const liveDateObj = new Date(liveDateTime);
-
         const liveDateFormatted = liveDateObj.toLocaleDateString("en-US", { 
             month: "long", day: "numeric", year: "numeric", timeZone: "America/Los_Angeles"
         });
@@ -79,29 +51,27 @@ app.post('/new-live', async (req, res) => {
         await channel.send(formattedMessage);
         console.log(`Posted new live for ${clientName} (${pod})`);
 
-        // Schedule 15-min reminder
-        scheduleReminder(liveDateObj, roleId, clientName);
-
         res.status(200).send('Success');
     } catch (err) {
         console.error('Error posting to Discord:', err);
         res.status(500).send('Error posting to Discord');
-// Existing /new-live endpoint
-app.post('/new-live', async (req, res) => {
-    try {
-        const { clientName, pod, liveDateTime } = req.body;
-        // ... existing code ...
-    } catch (err) {
-        // ... existing error handling ...
     }
 });
 
-// NEW endpoint: handle reminder pings
+// Reminder endpoint (called by Apps Script cron)
 app.post('/send-reminder', async (req, res) => {
     try {
         const { clientName, pod } = req.body;
-        const roleId =
+        const roleId = roleMap[pod];
+        if (!clientName || !roleId) return res.status(400).send('Missing fields');
 
+        const channel = await discordClient.channels.fetch(CHANNEL_ID);
+        await channel.send(`<@&${roleId}>\nReminder: ${clientName} goes live in 15 minutes!`);
+        console.log(`Sent reminder for ${clientName}`);
+        res.status(200).send('Reminder sent');
+    } catch (err) {
+        console.error('Error posting reminder:', err);
+        res.status(500).send('Error posting reminder');
     }
 });
 
