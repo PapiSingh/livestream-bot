@@ -86,6 +86,22 @@ app.post('/new-live', async (req, res) => {
     } catch (err) {
         console.error('Error posting to Discord:', err);
         res.status(500).send('Error posting to Discord');
+// Existing /new-live endpoint
+app.post('/new-live', async (req, res) => {
+    try {
+        const { clientName, pod, liveDateTime } = req.body;
+        // ... existing code ...
+    } catch (err) {
+        // ... existing error handling ...
+    }
+});
+
+// NEW endpoint: handle reminder pings
+app.post('/send-reminder', async (req, res) => {
+    try {
+        const { clientName, pod } = req.body;
+        const roleId =
+
     }
 });
 
