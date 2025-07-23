@@ -23,15 +23,25 @@ const roleMap = {
     "Pod 6": "1385286282552279040"
 };
 
-// Helper: Convert to Pacific Time
-function toPacific(dateObj) {
-    return new Date(dateObj.toLocaleString("en-US", { timeZone: "America/Los_Angeles" }));
+// Combine raw Google Sheets date + time into Pacific time
+function buildPacificDate(liveDateRaw, liveTimeRaw) {
+    const datePart = new Date(liveDateRaw);
+    const timePart = new Date(liveTimeRaw);
+
+    const combined = new Date(
+        datePart.getFullYear(),
+        datePart.getMonth(),
+        datePart.getDate(),
+        timePart.getHours(),
+        timePart.getMinutes()
+    );
+
+    return new Date(combined.toLocaleString("en-US", { timeZone: "America/Los_Angeles" }));
 }
 
 // Schedule 15-minute reminder
-function scheduleReminder(liveDateTimeISO, roleId, clientName) {
-    const liveDateTime = toPacific(new Date(liveDateTimeISO));
-    const reminderTime = new Date(liveDateTime.getTime() - 15 * 60 * 1000);
+function scheduleReminder(liveDateObj, roleId, clientName) {
+    const reminderTime = new Date(liveDateObj.getTime() - 15 * 60 * 1000);
     const delay = reminderTime.getTime() - Date.now();
 
     if (delay > 0) {
@@ -53,8 +63,8 @@ function scheduleReminder(liveDateTimeISO, roleId, clientName) {
 // Webhook endpoint for Google Apps Script
 app.post('/new-live', async (req, res) => {
     try {
-        const { clientName, pod, liveDateTime } = req.body;
-        if (!clientName || !pod || !liveDateTime) {
+        const { clientName, pod, liveDate, liveTime } = req.body;
+        if (!clientName || !pod || !liveDate || !liveTime) {
             return res.status(400).send('Missing fields');
         }
 
@@ -64,23 +74,23 @@ app.post('/new-live', async (req, res) => {
             return res.status(400).send('Invalid Pod name');
         }
 
-        const liveDateObj = toPacific(new Date(liveDateTime));
+        const liveDateObj = buildPacificDate(liveDate, liveTime);
 
-        const liveDate = liveDateObj.toLocaleDateString("en-US", { 
+        const liveDateFormatted = liveDateObj.toLocaleDateString("en-US", { 
             month: "long", day: "numeric", year: "numeric", timeZone: "America/Los_Angeles"
         });
-        const liveTime = liveDateObj.toLocaleTimeString("en-US", { 
+        const liveTimeFormatted = liveDateObj.toLocaleTimeString("en-US", { 
             hour: "numeric", minute: "2-digit", timeZone: "America/Los_Angeles"
         });
 
-        const formattedMessage = `<@&${roleId}>\n${clientName} – ${liveDate} at ${liveTime} PST`;
+        const formattedMessage = `<@&${roleId}>\n${clientName} – ${liveDateFormatted} at ${liveTimeFormatted} PST`;
 
         const channel = await discordClient.channels.fetch(CHANNEL_ID);
         await channel.send(formattedMessage);
         console.log(`Posted new live for ${clientName} (${pod})`);
 
         // Schedule 15-min reminder
-        scheduleReminder(liveDateTime, roleId, clientName);
+        scheduleReminder(liveDateObj, roleId, clientName);
 
         res.status(200).send('Success');
     } catch (err) {
