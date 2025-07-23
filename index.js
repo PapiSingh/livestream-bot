@@ -28,6 +28,11 @@ function scheduleReminder(liveDateObj, roleId, clientName) {
     const reminderTime = new Date(liveDateObj.getTime() - 15 * 60 * 1000);
     const delay = reminderTime.getTime() - Date.now();
 
+    console.log(`DEBUG: Now = ${new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" })}`);
+    console.log(`DEBUG: Live time = ${liveDateObj.toLocaleString("en-US", { timeZone: "America/Los_Angeles" })}`);
+    console.log(`DEBUG: Reminder scheduled for = ${reminderTime.toLocaleString("en-US", { timeZone: "America/Los_Angeles" })}`);
+    console.log(`DEBUG: Delay (ms) = ${delay}`);
+
     if (delay > 0) {
         console.log(`Scheduling reminder for ${clientName} at ${reminderTime.toLocaleString("en-US", { timeZone: "America/Los_Angeles" })}`);
         setTimeout(async () => {
@@ -43,6 +48,7 @@ function scheduleReminder(liveDateObj, roleId, clientName) {
         console.log(`Skipped reminder for ${clientName} (time already passed or too close)`);
     }
 }
+
 
 // Webhook endpoint for Google Apps Script
 app.post('/new-live', async (req, res) => {
