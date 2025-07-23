@@ -58,7 +58,7 @@ app.post('/new-live', async (req, res) => {
             return res.status(400).send('Invalid Pod name');
         }
 
-        const liveDateObj = new Date(liveDateTime); // Parse the ISO string directly
+        const liveDateObj = new Date(liveDateTime);
 
         const liveDateFormatted = liveDateObj.toLocaleDateString("en-US", { 
             month: "long", day: "numeric", year: "numeric", timeZone: "America/Los_Angeles"
@@ -67,7 +67,7 @@ app.post('/new-live', async (req, res) => {
             hour: "numeric", minute: "2-digit", timeZone: "America/Los_Angeles"
         });
 
-        const formattedMessage = `<@&${roleId}>\n${clientName} – ${liveDateFormatted} at ${liveTimeFormatted} PST`;
+        const formattedMessage = `<@&${roleId}>\n${clientName} – ${liveDateFormatted} at **${liveTimeFormatted} PST**`;
 
         const channel = await discordClient.channels.fetch(CHANNEL_ID);
         await channel.send(formattedMessage);
