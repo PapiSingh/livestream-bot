@@ -24,12 +24,13 @@ const roleMap = {
 };
 
 // Schedule 15-minute reminder
-function scheduleReminder(liveDate, liveTime, roleId, clientName) {
-    const liveDateTime = new Date(`${liveDate} ${liveTime} PST`);
-    const reminderTime = new Date(liveDateTime.getTime() - 15 * 60 * 1000); // 15 mins before
+function scheduleReminder(liveDateTimeISO, roleId, clientName) {
+    const liveDateTime = new Date(liveDateTimeISO);
+    const reminderTime = new Date(liveDateTime.getTime() - 15 * 60 * 1000);
     const delay = reminderTime.getTime() - Date.now();
 
     if (delay > 0) {
+        console.log(`Scheduling reminder for ${clientName} at ${reminderTime.toLocaleString()}`);
         setTimeout(async () => {
             try {
                 const channel = await discordClient.channels.fetch(CHANNEL_ID);
@@ -40,15 +41,15 @@ function scheduleReminder(liveDate, liveTime, roleId, clientName) {
             }
         }, delay);
     } else {
-        console.log(`Skipped reminder for ${clientName} (time already passed)`);
+        console.log(`Skipped reminder for ${clientName} (time already passed or too close)`);
     }
 }
 
 // Webhook endpoint for Google Apps Script
 app.post('/new-live', async (req, res) => {
     try {
-        const { clientName, pod, liveDate, liveTime } = req.body;
-        if (!clientName || !pod || !liveDate || !liveTime) {
+        const { clientName, pod, liveDateTime } = req.body;
+        if (!clientName || !pod || !liveDateTime) {
             return res.status(400).send('Missing fields');
         }
 
@@ -59,13 +60,19 @@ app.post('/new-live', async (req, res) => {
         }
 
         const channel = await discordClient.channels.fetch(CHANNEL_ID);
+
+        // Format message date/time nicely
+        const liveDate = new Date(liveDateTime).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+        const liveTime = new Date(liveDateTime).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+
         const formattedMessage = `<@&${roleId}>\n${clientName} – ${liveDate} at ${liveTime} PST`;
 
+        // Send the initial message
         await channel.send(formattedMessage);
         console.log(`Posted new live for ${clientName} (${pod})`);
 
         // Schedule 15-min reminder
-        scheduleReminder(liveDate, liveTime, roleId, clientName);
+        scheduleReminder(liveDateTime, roleId, clientName);
 
         res.status(200).send('Success');
     } catch (err) {
