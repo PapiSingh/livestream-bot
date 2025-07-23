@@ -23,22 +23,6 @@ const roleMap = {
     "Pod 6": "1385286282552279040"
 };
 
-// Combine raw Google Sheets date + time into Pacific time
-function buildPacificDate(liveDateRaw, liveTimeRaw) {
-    const datePart = new Date(liveDateRaw);
-    const timePart = new Date(liveTimeRaw);
-
-    const combined = new Date(
-        datePart.getFullYear(),
-        datePart.getMonth(),
-        datePart.getDate(),
-        timePart.getHours(),
-        timePart.getMinutes()
-    );
-
-    return new Date(combined.toLocaleString("en-US", { timeZone: "America/Los_Angeles" }));
-}
-
 // Schedule 15-minute reminder
 function scheduleReminder(liveDateObj, roleId, clientName) {
     const reminderTime = new Date(liveDateObj.getTime() - 15 * 60 * 1000);
@@ -63,8 +47,8 @@ function scheduleReminder(liveDateObj, roleId, clientName) {
 // Webhook endpoint for Google Apps Script
 app.post('/new-live', async (req, res) => {
     try {
-        const { clientName, pod, liveDate, liveTime } = req.body;
-        if (!clientName || !pod || !liveDate || !liveTime) {
+        const { clientName, pod, liveDateTime } = req.body;
+        if (!clientName || !pod || !liveDateTime) {
             return res.status(400).send('Missing fields');
         }
 
@@ -74,7 +58,7 @@ app.post('/new-live', async (req, res) => {
             return res.status(400).send('Invalid Pod name');
         }
 
-        const liveDateObj = buildPacificDate(liveDate, liveTime);
+        const liveDateObj = new Date(liveDateTime); // Parse the ISO string directly
 
         const liveDateFormatted = liveDateObj.toLocaleDateString("en-US", { 
             month: "long", day: "numeric", year: "numeric", timeZone: "America/Los_Angeles"
